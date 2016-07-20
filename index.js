@@ -225,9 +225,7 @@ module.exports = {
 				buffer.setMaxListeners(0);
 
 				if (file.isNull() || file.isDirectory()) {
-					cb();
-
-					return;
+					return cb();
 				}
 
 				if (file.isStream()) {
@@ -235,9 +233,7 @@ module.exports = {
 						plugin: 'gulp-transifex',
 						message: 'Streams not supported'
 					}));
-					cb();
-
-					return;
+					return cb();
 				}
 
 				if (file.isBuffer()) {
@@ -418,16 +414,14 @@ module.exports = {
 				buffer.setMaxListeners(0);
 				var data, req, request_options;
 				if (file.isNull() || file.isDirectory()) {
-					cb();
-					return;
+					return cb();
 				}
 				if (file.isStream()) {
 					buffer.emit('error creating new resource: ',
 						new gutil.PluginError('gulp-transifex', 'Error', {
 							message: 'Streams not supported'
 					}));
-					cb();
-					return;
+					return cb();
 				}
 				if (file.isBuffer()) {
 
@@ -499,8 +493,7 @@ module.exports = {
 						plugin: 'gulp-transifex',
 						message: 'Null files are not supported'
 					}));
-					cb();
-					return;
+					return cb();
 				}
 
 				if (file.isStream()) {
@@ -508,8 +501,7 @@ module.exports = {
 						plugin: 'gulp-transifex',
 						message: 'Streams not supported'
 					}));
-					cb();
-					return;
+					return cb();
 				}
 
 				if (file.isBuffer()) {
