@@ -57,6 +57,29 @@ module.exports = {
 			});
 		};
 
+		this.resourceName = function(file) {
+			if (typeof options.resource_name === 'function') {
+				return options.resource_name(file);
+			} else {
+				return path.basename(file.path).replace(/\./, '');
+			}
+		};
+
+		this.targetName = function(file, langIso) {
+			if (typeof options.target_name === 'function') {
+				return options.target_name(file, langIso);
+			} else {
+				const ext_name = path.extname(file.path);
+				const file_name = path.basename(file.path, ext_name);
+
+				if (ext_name === '.pot') {
+					ext_name = '.po';
+				}
+
+				return file_name + ext_name;
+			}
+		};
+
 		this.resourceAttributes = function (resource, callback) {
 			var req, attrs = '';
 			req = request('GET', _this._paths.get_resource({
@@ -108,7 +131,7 @@ module.exports = {
 					remoteDate = '',
 					newFile = false;
 
-			resource = path.basename(file.path).replace(/\./,'');
+			resource = _this.resourceName(file);
 			async.series([
 				function (cb) {
 					_this.resourceAttributes(resource, function (data) {
@@ -259,7 +282,7 @@ module.exports = {
 									port: '443',
 									path: _this._paths.update_resource({
 										project: options.project,
-										resource: path.basename(file.path).replace(/\./,'')
+										resource: _this.resourceName(file)
 									}),
 									method: 'PUT',
 									auth: options.user + ':' + options.password,
@@ -288,8 +311,7 @@ module.exports = {
 													.toString('utf8'),
 												name: path.basename(file.path)
 													.replace(path.extname(file.path), ''),
-												slug: path.basename(file.path)
-													.replace(/\./,''),
+												slug: _this.resourceName(file),
 												i18n_type: options.i18n_type
 											};
 											data = JSON.stringify(data);
@@ -428,7 +450,7 @@ module.exports = {
 					data = {
 						content: file.contents.toString('utf8'),
 						name: path.basename(file.path),
-						slug: path.basename(file.path).replace(path.extname(file.path)),
+						slug: _this.resourceName(file.path),
 						i18n_type: options.i18n_type
 					};
 					data = JSON.stringify(data);
@@ -563,7 +585,7 @@ module.exports = {
 							}
 
 							request_options.path = _this._paths.get_or_create_translation({
-								resource: path.basename(file.path).replace(/\./, ''),
+								resource: _this.resourceName(file),
 								language: langIso
 							});
 							req = httpsClient.get(request_options, function (res) {
@@ -597,12 +619,23 @@ module.exports = {
 								});
 
 								res.on('end', function () {
-									var data;
+									var data, target;
 
 									if (skip) {
 										buffer.push(file);
 										return callback();
 									}
+
+									target = path.resolve(local_path, _this.targetName(file, langIso));
+									if (!fs.existsSync(path.dirname(target))) {
+										mkdirp.sync(path.dirname(target));
+									}
+									output = fs.createWriteStream(target);
+
+									output.on('finish', function () {
+										buffer.push(file);
+										return callback();
+									});
 
 									gutil.log(chalk.green('✔ ') +
 										chalk.blue(langIso, path.basename(file.path)) +
@@ -620,30 +653,7 @@ module.exports = {
 										}));
 										output.end();
 									}
-
 								});
-							});
-
-							local_path	= path.resolve(local_path);
-							ext_name	= path.extname(file.path);
-							file_name	= path.basename(file.path, ext_name);
-
-
-							if (ext_name === '.pot') {
-								ext_name = '.po';
-							}
-
-							file_name = local_path + '/' + file_name + ext_name;
-
-							if (!fs.existsSync(local_path)) {
-								mkdirp.sync(local_path);
-							}
-
-							output = fs.createWriteStream(file_name);
-
-							output.on('finish', function () {
-								buffer.push(file);
-								callback();
 							});
 
 							req.on('error', function (err) {
@@ -655,14 +665,11 @@ module.exports = {
 							cb();
 						})
 					});
-
 				}
-
 			}, function (cb) {
 				if (callback) {
 					callback();
 				}
-				gutil.log('File saved');
 				cb();
 			});
 			return buffer;
